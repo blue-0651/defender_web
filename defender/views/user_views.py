@@ -104,27 +104,59 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='read')
     def read_users(self, request):
         try:
-            users = self.get_queryset()
-            serializer = self.get_serializer(users, many=True)
-
-            return Response({
-                "resultCode": "20",
-                "message": "성공",
-                "data": {
-                    "usrList": serializer.data
-                }
-            })
+            email = request.data.get('email')
+            if email:
+                try:
+                    user = User.objects.get(email=email)
+                    serializer = self.get_serializer(user)
+                    return Response({
+                        "resultCode": "20",
+                        "message": "성공",
+                        "data": serializer.data
+                    })
+                except User.DoesNotExist:
+                    return Response({
+                        "resultCode": "40",
+                        "message": "사용자를 찾을 수 없습니다.",
+                        "data": None
+                    }, status=status.HTTP_404_NOT_FOUND)
+            else:
+                users = self.get_queryset()
+                serializer = self.get_serializer(users, many=True)
+                return Response({
+                    "resultCode": "20",
+                    "message": "성공",
+                    "data": {
+                        "usrList": serializer.data
+                    }
+                })
         except Exception as e:
             return Response({
                 "resultCode": "40",
-                "message": "실패"
-            }, status=400)
+                "message": "실패",
+                "data": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-    @log_request_params
-    @action(detail=True, methods=['post'], url_path='read')
+    @action(detail=True, methods=['get', 'post'], url_path='read')
     def read_user(self, request, pk=None):
         try:
             user = self.get_object()
+            serializer = self.get_serializer(user)
+            return Response({
+                "resultCode": "20",
+                "message": "성공",
+                "data": serializer.data
+            })
+        except User.DoesNotExist:
+            return Response(
+                {"resultCode": "40", "message": "사용자를 찾을 수 없습니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=False, methods=['get'], url_path='email/(?P<email>.*)/read')
+    def read_user_by_email(self, request, email=None):
+        try:
+            user = User.objects.get(email=email)
             serializer = self.get_serializer(user)
             return Response({
                 "resultCode": "20",
