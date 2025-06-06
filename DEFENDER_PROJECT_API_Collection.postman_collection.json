@@ -1,0 +1,834 @@
+{
+	"info": {
+		"_postman_id": "defender-project-api-collection",
+		"name": "DEFENDER PROJECT API Collection",
+		"description": "불량고객 관리 시스템 API 컬렉션\n\n**서버 정보:**\n- 개발서버: http://3.38.245.204:8000\n- 로컬서버: http://127.0.0.1:8000\n\n**인증:** Bearer Token 방식 (고정 토큰: defender0651)\n\n**응답 형식:**\n```json\n{\n  \"resultCode\": \"20\", // 20: 성공, 30: 중복, 40: 실패\n  \"message\": \"메시지\",\n  \"data\": {} // 응답 데이터\n}\n```",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "사용자 관리 (Users)",
+			"item": [
+				{
+					"name": "로그인",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"admin\",\n  \"pw\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/login/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "login", ""]
+						},
+						"description": "사용자 로그인 API\n\n**요청 파라미터:**\n- id (string, 필수): 사용자 ID\n- pw (string, 필수): 비밀번호\n\n**응답 예시:**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"로그인 성공\",\n  \"data\": {\n    \"id\": \"admin\",\n    \"email\": \"admin@example.com\",\n    \"store_name\": \"관리자 매장\",\n    \"isAdmin\": true,\n    \"search_count\": 1000,\n    \"usage_start_date\": \"2024-01-01\",\n    \"usage_end_date\": \"2024-12-31\"\n  }\n}\n```\n\n**참고:** 이 API는 사용자 정보 확인용이며, 별도 토큰을 발급하지 않습니다."
+					}
+				},
+				{
+					"name": "사용자 생성",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "id",
+									"value": "store001",
+									"type": "text",
+									"description": "사용자 ID (영문, 숫자 조합)"
+								},
+								{
+									"key": "pw",
+									"value": "store123!",
+									"type": "text",
+									"description": "비밀번호 (8자 이상 권장)"
+								},
+								{
+									"key": "email",
+									"value": "store001@example.com",
+									"type": "text",
+									"description": "이메일 주소"
+								},
+								{
+									"key": "store_name",
+									"value": "다이소 강남점",
+									"type": "text",
+									"description": "매장명"
+								},
+								{
+									"key": "phone_number",
+									"value": "010-1234-5678",
+									"type": "text",
+									"description": "매장 연락처"
+								},
+								{
+									"key": "isAdmin",
+									"value": "false",
+									"type": "text",
+									"description": "관리자 여부 (true/false)"
+								},
+								{
+									"key": "business_license_image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/create/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "create", ""]
+						},
+						"description": "새 사용자 생성 (회원가입)\n\n**요청 파라미터:**\n- id (string, 필수): 사용자 ID\n- pw (string, 필수): 비밀번호\n- email (string, 필수): 이메일 주소\n- store_name (string, 필수): 매장명\n- phone_number (string, 필수): 연락처\n- isAdmin (string, 필수): 관리자 여부 (true/false)\n- business_license_image (file, 필수): 사업자등록증 이미지\n\n**응답 예시:**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"사용자 생성 성공\",\n  \"data\": {\n    \"id\": \"store001\",\n    \"email\": \"store001@example.com\",\n    \"store_name\": \"다이소 강남점\",\n    \"phone_number\": \"010-1234-5678\",\n    \"isAdmin\": false,\n    \"search_count\": 0,\n    \"business_license_image\": \"/media/licenseImage/store001_license.jpg\"\n  }\n}\n```"
+					}
+				},
+				{
+					"name": "사용자 목록 조회",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/read/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "read", ""]
+						},
+						"description": "전체 사용자 목록 조회"
+					}
+				},
+				{
+					"name": "특정 사용자 조회 (이메일)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/read/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "read", ""]
+						},
+						"description": "이메일로 특정 사용자 조회"
+					}
+				},
+				{
+					"name": "사용자 정보 수정",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "email",
+									"value": "updated@example.com",
+									"type": "text"
+								},
+								{
+									"key": "store_name",
+									"value": "수정된 매장명",
+									"type": "text"
+								},
+								{
+									"key": "phone_number",
+									"value": "010-9876-5432",
+									"type": "text"
+								},
+								{
+									"key": "business_license_image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/update/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "update", ""]
+						},
+						"description": "사용자 정보 수정"
+					}
+				},
+				{
+					"name": "사용자 삭제 (ID로)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/delete/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "delete", ""]
+						},
+						"description": "사용자 ID로 사용자 삭제\n\n**요청 파라미터:**\n- user_id (path, 필수): 삭제할 사용자 ID\n\n**응답 예시:**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"사용자가 성공적으로 삭제되었습니다.\",\n  \"data\": {\n    \"id\": \"store001\"\n  }\n}\n```"
+					}
+				},
+				{
+					"name": "사용자 삭제 (이메일로)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/email/aaa@gmail.com/delete/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "email", "aaa@gmail.com", "delete", ""]
+						},
+						"description": "이메일로 사용자 삭제\n\n**요청 파라미터:**\n- email (path, 필수): 삭제할 사용자 이메일\n\n**URL 예시:**\n- `/api/users/email/aaa@gmail.com/delete/`\n- `/api/users/email/store001@example.com/delete/`\n\n**응답 예시:**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"사용자가 성공적으로 삭제되었습니다.\",\n  \"data\": {\n    \"id\": \"store001\",\n    \"email\": \"aaa@gmail.com\"\n  }\n}\n```\n\n**오류 응답:**\n```json\n{\n  \"resultCode\": \"40\",\n  \"message\": \"해당 이메일의 사용자를 찾을 수 없습니다.\",\n  \"data\": null\n}\n```"
+					}
+				},
+				{
+					"name": "비밀번호 변경",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"testuser\",\n  \"current_password\": \"oldpassword\",\n  \"new_password\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/update-password/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "update-password", ""]
+						},
+						"description": "사용자 비밀번호 변경"
+					}
+				},
+				{
+					"name": "검색 횟수 조정",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"adjustment\": 100\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/adjust-search-count/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "adjust-search-count", ""]
+						},
+						"description": "사용자 검색 횟수 조정"
+					}
+				},
+				{
+					"name": "사용 기간 설정",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start_date\": \"2024-01-01\",\n  \"end_date\": \"2024-12-31\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/set-usage-period/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "set-usage-period", ""]
+						},
+						"description": "사용자 사용 기간 설정"
+					}
+				},
+				{
+					"name": "사용 기간 연장",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"days\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/extend-usage-period/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "extend-usage-period", ""]
+						},
+						"description": "사용자 사용 기간 연장"
+					}
+				},
+				{
+					"name": "사용자 상태 확인",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/check-status/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "check-status", ""]
+						},
+						"description": "사용자 상태 확인 (사용 기간, 검색 횟수 등)"
+					}
+				}
+			],
+			"description": "사용자 관리 관련 API"
+		},
+		{
+			"name": "고객 관리 (Clients)",
+			"item": [
+				{
+					"name": "고객 저장",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nickName\": \"홍길동123\",\n  \"phoneNumber\": \"010-9876-5432\",\n  \"name\": \"홍길동\",\n  \"address\": \"서울시 강남구 테헤란로 123\",\n  \"memo\": \"단골고객, 매월 정기주문\",\n  \"isBadClient\": false,\n  \"userId\": \"store001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/save/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "save", ""]
+						},
+						"description": "새 고객 정보 저장\n\n**요청 파라미터:**\n- nickName (string, 필수): 고객 닉네임 (고유값)\n- phoneNumber (string, 필수): 전화번호 (암호화되어 저장)\n- name (string, 선택): 고객 실명\n- address (string, 선택): 주소\n- memo (string, 선택): 메모\n- isBadClient (boolean, 선택): 불량고객 여부\n- userId (string, 필수): 등록하는 사용자 ID\n\n**응답 예시:**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"성공\",\n  \"data\": {\n    \"id\": 1,\n    \"nickName\": \"홍길동123\",\n    \"name\": \"홍길동\",\n    \"phoneNumber\": \"encrypted_phone_data\",\n    \"decrypted_phone\": \"010-9876-5432\",\n    \"address\": \"서울시 강남구 테헤란로 123\",\n    \"memo\": \"단골고객, 매월 정기주문\",\n    \"isBadClient\": false,\n    \"registeredBy\": \"store001\",\n    \"store_name\": \"다이소 강남점\",\n    \"createDate\": \"2024-03-22T10:30:00Z\"\n  }\n}\n```\n\n**중복 처리:**\n- 닉네임 중복 시 resultCode \"30\" 반환\n- 같은 매장에서 동일 전화번호 등록 시 기존 정보 업데이트"
+					}
+				},
+				{
+					"name": "고객 목록 조회",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/list/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "list", ""]
+						},
+						"description": "전체 고객 목록 조회"
+					}
+				},
+				{
+					"name": "고객 정보 수정",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"수정된 이름\",\n  \"address\": \"수정된 주소\",\n  \"memo\": \"수정된 메모\",\n  \"isBadClient\": true,\n  \"userId\": \"testuser\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/{{client_id}}/update/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "{{client_id}}", "update", ""]
+						},
+						"description": "고객 정보 수정"
+					}
+				},
+				{
+					"name": "고객 삭제",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"testuser\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/{{client_id}}/delete/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "{{client_id}}", "delete", ""]
+						},
+						"description": "고객 삭제"
+					}
+				},
+				{
+					"name": "고객 검색",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"keyword\": \"검색어\",\n  \"userId\": \"testuser\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/search/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "search", ""]
+						},
+						"description": "고객 검색 (이름, 닉네임, 주소 등)"
+					}
+				},
+				{
+					"name": "전화번호로 고객 검색",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"010-1234-5678\",\n  \"userId\": \"testuser\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/search-by-phone/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "search-by-phone", ""]
+						},
+						"description": "전화번호로 고객 검색"
+					}
+				},
+				{
+					"name": "불량고객 체크",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"010-9876-5432\",\n  \"userId\": \"store001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/check-bad-client/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "check-bad-client", ""]
+						},
+						"description": "전화번호로 불량고객 여부 확인\n\n**요청 파라미터:**\n- phoneNumber (string, 필수): 확인할 전화번호\n- userId (string, 필수): 요청하는 사용자 ID\n\n**응답 예시 (불량고객인 경우):**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"불량고객입니다.\",\n  \"data\": {\n    \"isBadClient\": true,\n    \"clientInfo\": {\n      \"nickName\": \"홍길동123\",\n      \"name\": \"홍길동\",\n      \"memo\": \"결제 지연 이력 있음\",\n      \"registeredBy\": \"store002\",\n      \"store_name\": \"다이소 역삼점\"\n    }\n  }\n}\n```\n\n**응답 예시 (일반고객인 경우):**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"일반고객입니다.\",\n  \"data\": {\n    \"isBadClient\": false,\n    \"clientInfo\": null\n  }\n}\n```\n\n**참고:** 이 API는 사용자의 검색 횟수를 차감하지 않습니다."
+					}
+				},
+				{
+					"name": "닉네임으로 고객 조회",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nickName\": \"고객닉네임\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/get-by-nickname/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "get-by-nickname", ""]
+						},
+						"description": "닉네임으로 고객 정보 조회"
+					}
+				},
+				{
+					"name": "닉네임 중복 확인",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nickName\": \"확인할닉네임\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/check-nickname/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "check-nickname", ""]
+						},
+						"description": "닉네임 중복 여부 확인"
+					}
+				},
+				{
+					"name": "닉네임으로 고객 수정",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nickName\": \"고객닉네임\",\n  \"name\": \"수정된 이름\",\n  \"address\": \"수정된 주소\",\n  \"memo\": \"수정된 메모\",\n  \"isBadClient\": true,\n  \"userId\": \"testuser\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/update-by-nickname/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "update-by-nickname", ""]
+						},
+						"description": "닉네임으로 고객 정보 수정"
+					}
+				},
+				{
+					"name": "닉네임으로 고객 삭제",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nickName\": \"삭제할닉네임\",\n  \"userId\": \"testuser\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/delete-by-nickname/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "delete-by-nickname", ""]
+						},
+						"description": "닉네임으로 고객 삭제"
+					}
+				},
+				{
+					"name": "전화번호 검색 및 횟수 차감",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"010-9876-5432\",\n  \"userId\": \"store001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients/search-phone-and-decrease/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "clients", "search-phone-and-decrease", ""]
+						},
+						"description": "전화번호로 검색하고 사용자 검색 횟수 차감\n\n**요청 파라미터:**\n- phoneNumber (string, 필수): 검색할 전화번호\n- userId (string, 필수): 요청하는 사용자 ID\n\n**응답 예시 (고객 발견):**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"고객을 찾았습니다. 검색 횟수가 차감되었습니다.\",\n  \"data\": {\n    \"clientInfo\": {\n      \"nickName\": \"홍길동123\",\n      \"name\": \"홍길동\",\n      \"isBadClient\": false,\n      \"memo\": \"단골고객, 매월 정기주문\",\n      \"registeredBy\": \"store001\",\n      \"store_name\": \"다이소 강남점\"\n    },\n    \"remainingSearchCount\": 99\n  }\n}\n```\n\n**응답 예시 (고객 없음):**\n```json\n{\n  \"resultCode\": \"40\",\n  \"message\": \"해당 전화번호로 등록된 고객이 없습니다.\",\n  \"data\": {\n    \"remainingSearchCount\": 99\n  }\n}\n```\n\n**중요:** 이 API는 검색 성공/실패와 관계없이 사용자의 검색 횟수를 차감합니다."
+					}
+				}
+			],
+			"description": "고객 관리 관련 API"
+		},
+		{
+			"name": "공지사항 관리 (Announcements)",
+			"item": [
+				{
+					"name": "공지사항 저장",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"시스템 점검 안내\",\n  \"content\": \"2024년 3월 25일 오전 2시부터 4시까지 시스템 점검이 진행됩니다. 이용에 불편을 드려 죄송합니다.\",\n  \"isImportant\": true,\n  \"userId\": \"admin\",\n  \"memo\": \"모든 사용자에게 알림 발송 완료\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/announce/save/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "announce", "save", ""]
+						},
+						"description": "새 공지사항 저장\n\n**요청 파라미터:**\n- title (string, 필수): 공지사항 제목\n- content (string, 선택): 공지사항 내용\n- isImportant (boolean, 선택): 중요 공지 여부\n- userId (string, 필수): 작성자 ID\n- memo (string, 선택): 관리자 메모\n\n**응답 예시:**\n```json\n{\n  \"resultCode\": \"20\",\n  \"message\": \"성공\",\n  \"data\": {\n    \"id\": 1,\n    \"title\": \"시스템 점검 안내\",\n    \"content\": \"2024년 3월 25일 오전 2시부터 4시까지 시스템 점검이 진행됩니다.\",\n    \"isImportant\": true,\n    \"userId\": \"admin\",\n    \"memo\": \"모든 사용자에게 알림 발송 완료\",\n    \"createDate\": \"2024-03-22T15:30:00Z\"\n  }\n}\n```"
+					}
+				},
+				{
+					"name": "공지사항 목록 조회",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/announce/list/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "announce", "list", ""]
+						},
+						"description": "전체 공지사항 목록 조회"
+					}
+				},
+				{
+					"name": "공지사항 수정",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"수정된 공지사항 제목\",\n  \"content\": \"수정된 공지사항 내용입니다.\",\n  \"isImportant\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/announce/{{announcement_id}}/update/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "announce", "{{announcement_id}}", "update", ""]
+						},
+						"description": "공지사항 수정"
+					}
+				},
+				{
+					"name": "공지사항 삭제",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/announce/{{announcement_id}}/delete/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "announce", "{{announcement_id}}", "delete", ""]
+						},
+						"description": "공지사항 삭제"
+					}
+				}
+			],
+			"description": "공지사항 관리 관련 API"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://3.38.245.204:8000",
+			"type": "string"
+		},
+		{
+			"key": "local_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "defender0651",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "store001",
+			"type": "string",
+			"description": "테스트용 사용자 ID"
+		},
+		{
+			"key": "client_id",
+			"value": "1",
+			"type": "string",
+			"description": "테스트용 고객 ID"
+		},
+		{
+			"key": "announcement_id",
+			"value": "1",
+			"type": "string",
+			"description": "테스트용 공지사항 ID"
+		}
+	]
+} 
