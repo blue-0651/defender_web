@@ -257,6 +257,30 @@ class UserViewSet(viewsets.ModelViewSet):
                 "data": None
             }, status=status.HTTP_404_NOT_FOUND)
 
+    # 이메일로 사용자 삭제
+    @log_request_params
+    @action(detail=False, methods=['delete'], url_path='email/(?P<email>.*)/delete')
+    def delete_user_by_email(self, request, email=None):
+        try:
+            user = User.objects.get(email=email)
+            user_id = user.id
+            user_email = user.email
+            user.delete()
+            return Response({
+                "resultCode": "20",
+                "message": "사용자가 성공적으로 삭제되었습니다.",
+                "data": {
+                    "id": user_id,
+                    "email": user_email
+                }
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({
+                "resultCode": "40",
+                "message": "해당 이메일의 사용자를 찾을 수 없습니다.",
+                "data": None
+            }, status=status.HTTP_404_NOT_FOUND)
+
     #사용자 정보 수정에서 비밀번호 변경 시 암호화 처리
     @log_request_params
     @action(detail=False, methods=['put'], url_path='update-password')
