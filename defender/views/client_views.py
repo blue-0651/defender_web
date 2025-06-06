@@ -13,6 +13,71 @@ class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
 
+    # ModelViewSet의 기본 update 메서드 override
+    def update(self, request, *args, **kwargs):
+        """
+        기본 PUT 요청으로 고객 정보 수정 (ModelViewSet의 update 메서드 오버라이드)
+        """
+        try:
+            instance = self.get_object()
+            user_id = request.data.get('userId')  # 현재 로그인한 사용자의 ID
+            
+            if not user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "사용자 ID를 입력하세요.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+            # 현재 사용자가 해당 고객을 등록한 사용자인지 확인
+            if instance.registeredBy != user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "해당 매장 고객이 아닙니다.",
+                    "data": None
+                }, status=status.HTTP_403_FORBIDDEN)
+                
+            # 닉네임은 변경할 수 없음
+            if 'nickName' in request.data:
+                return Response({
+                    "resultCode": "40",
+                    "message": "닉네임은 변경할 수 없습니다.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+            # 사용자ID와 닉네임을 제외한 데이터로 업데이트
+            update_data = {k: v for k, v in request.data.items() if k != 'nickName' and k != 'userId'}
+            
+            serializer = self.get_serializer(instance, data=update_data, partial=kwargs.pop('partial', False))
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            
+            return Response({
+                "resultCode": "20",
+                "message": "고객 정보가 성공적으로 수정되었습니다.",
+                "data": serializer.data
+            })
+        except Client.DoesNotExist:
+            return Response({
+                "resultCode": "40",
+                "message": "고객을 찾을 수 없습니다.",
+                "data": None
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                "resultCode": "40",
+                "message": f"오류가 발생했습니다: {str(e)}",
+                "data": None
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    # partial_update 메서드도 오버라이드 (PATCH 요청 처리)
+    def partial_update(self, request, *args, **kwargs):
+        """
+        기본 PATCH 요청으로 고객 정보 부분 수정 (ModelViewSet의 partial_update 메서드 오버라이드)
+        """
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
     # 고객 저장
     @log_request_params
     @action(detail=False, methods=['post'], url_path='save')
@@ -150,7 +215,35 @@ class ClientViewSet(viewsets.ModelViewSet):
         """
         try:
             client = self.get_object()
-            serializer = self.get_serializer(client, data=request.data, partial=True)
+            user_id = request.data.get('userId')  # 현재 로그인한 사용자의 ID
+            
+            if not user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "사용자 ID를 입력하세요.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 현재 사용자가 해당 고객을 등록한 사용자인지 확인
+            if client.registeredBy != user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "해당 매장 고객이 아닙니다.",
+                    "data": None
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 닉네임은 변경할 수 없음
+            if 'nickName' in request.data:
+                return Response({
+                    "resultCode": "40",
+                    "message": "닉네임은 변경할 수 없습니다.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 사용자ID와 닉네임을 제외한 데이터로 업데이트
+            update_data = {k: v for k, v in request.data.items() if k != 'nickName' and k != 'userId'}
+            
+            serializer = self.get_serializer(client, data=update_data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response({
@@ -247,12 +340,18 @@ class ClientViewSet(viewsets.ModelViewSet):
                     "data": None
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # 모든 고객의 전화번호를 복호화하여 정확히 일치하는 고객만 검색
+            # 모든 고객의 전화번호를 복호화하여 검색
+            # 입력된 전화번호에서 하이픈 제거
+            clean_phone_number = phone_number.replace("-", "").strip()
+            
             matching_clients = []
             for client in self.get_queryset():
                 decrypted_phone = client.decrypt_phone()
-                if decrypted_phone and decrypted_phone == phone_number:
-                    matching_clients.append(client)
+                if decrypted_phone:
+                    # 복호화된 전화번호에서도 하이픈 제거하여 비교
+                    clean_decrypted_phone = decrypted_phone.replace("-", "").strip()
+                    if clean_decrypted_phone == clean_phone_number:
+                        matching_clients.append(client)
 
             serializer = self.get_serializer(matching_clients, many=True)
             return Response({
@@ -300,42 +399,48 @@ class ClientViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             # 모든 고객의 전화번호를 복호화하여 검색
+            # 입력된 전화번호에서 하이픈 제거
+            clean_phone_number = phone_number.replace("-", "").strip()
+            
             for client in self.get_queryset():
                 decrypted_phone = client.decrypt_phone()
-                if decrypted_phone and decrypted_phone == phone_number:
-                    # 매장의 고객인지 확인
-                    if client.registeredBy == user_id:
-                        # 현 매장의 고객인 경우
-                        message = "불량 고객입니다." if client.isBadClient else "정상 고객입니다."
-                        return Response({
-                            "resultCode": "20",
-                            "message": message,
-                            "data": {
-                                "id": client.id,
-                                "name": client.name,
-                                "nickName": client.nickName,
-                                "gender": client.gender,
-                                "ages": client.ages,
-                                "isBadClient": client.isBadClient,
-                                "extra": client.extra,
-                                "createDate": client.createDate,
-                                "registeredBy": client.registeredBy,
-                                "store_name": client.store_name,
-                                "isOwnCustomer": True
-                            }
-                        })
-                    else:
-                        # 다른 매장의 고객인 경우
-                        return Response({
-                            "resultCode": "30",
-                            "message": "외부 고객입니다.",
-                            "data": {
-                                "id": client.id,
-                                "phoneNumber": phone_number,
-                                "store_name": client.store_name,
-                                "isOwnCustomer": False
-                            }
-                        })
+                if decrypted_phone:
+                    # 복호화된 전화번호에서도 하이픈 제거하여 비교
+                    clean_decrypted_phone = decrypted_phone.replace("-", "").strip()
+                    if clean_decrypted_phone == clean_phone_number:
+                        # 매장의 고객인지 확인
+                        if client.registeredBy == user_id:
+                            # 현 매장의 고객인 경우
+                            message = "불량 고객입니다." if client.isBadClient else "정상 고객입니다."
+                            return Response({
+                                "resultCode": "20",
+                                "message": message,
+                                "data": {
+                                    "id": client.id,
+                                    "name": client.name,
+                                    "nickName": client.nickName,
+                                    "gender": client.gender,
+                                    "ages": client.ages,
+                                    "isBadClient": client.isBadClient,
+                                    "extra": client.extra,
+                                    "createDate": client.createDate,
+                                    "registeredBy": client.registeredBy,
+                                    "store_name": client.store_name,
+                                    "isOwnCustomer": True
+                                }
+                            })
+                        else:
+                            # 다른 매장의 고객인 경우
+                            return Response({
+                                "resultCode": "30",
+                                "message": "외부 고객입니다.",
+                                "data": {
+                                    "id": client.id,
+                                    "phoneNumber": phone_number,
+                                    "store_name": client.store_name,
+                                    "isOwnCustomer": False
+                                }
+                            })
 
             return Response({
                 "resultCode": "40",
@@ -377,49 +482,58 @@ class ClientViewSet(viewsets.ModelViewSet):
                 "message": "고객을 찾을 수 없습니다."
             }, status=status.HTTP_404_NOT_FOUND)
 
-    # nickName으로 고객 수정 (POST 방식)
+    # ID로 고객 수정 (POST 방식)
     @log_request_params
-    @action(detail=False, methods=['post'], url_path='update-by-nickname')
-    def update_by_nickname(self, request):
+    @action(detail=False, methods=['post'], url_path='update-by-id')
+    def update_client_by_id(self, request):
         """
-        '/api/client/update-by-nickname/' 엔드포인트로 고객 정보 수정 (POST 방식)
+        '/api/client/update-by-id/' 엔드포인트로 고객 정보 수정 (POST 방식)
         """
         try:
-            nickname = request.data.get('nickName')
-            if not nickname:
+            client_id = request.data.get('id')
+            user_id = request.data.get('userId')  # 현재 로그인한 사용자의 ID
+            
+            if not client_id:
                 return Response({
                     "resultCode": "40",
-                    "message": "닉네임을 입력하세요.",
+                    "message": "고객 ID를 입력하세요.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "사용자 ID를 입력하세요.",
                     "data": None
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             try:
-                client = Client.objects.get(nickName=nickname)
+                client = Client.objects.get(id=client_id)
             except Client.DoesNotExist:
                 return Response({
                     "resultCode": "40",
                     "message": "고객을 찾을 수 없습니다.",
                     "data": None
                 }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 현재 사용자가 해당 고객을 등록한 사용자인지 확인
+            if client.registeredBy != user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "해당 매장 고객이 아닙니다.",
+                    "data": None
+                }, status=status.HTTP_403_FORBIDDEN)
 
-            # 새 닉네임 변경 요청이 있는 경우 중복 체크
-            new_nickname = request.data.get('newNickName')
-            if new_nickname and new_nickname != nickname:
-                if Client.objects.filter(nickName=new_nickname).exists():
-                    return Response({
-                        "resultCode": "30",
-                        "message": "아이디가 이미 존재합니다.",
-                        "data": {
-                            "nickName": new_nickname,
-                            "exists": True
-                        }
-                    }, status=status.HTTP_200_OK)
-                # 새 닉네임을 업데이트 데이터에 추가
-                update_data = {k: v for k, v in request.data.items() if k != 'nickName'}
-                update_data['nickName'] = new_nickname
-            else:
-                # nickName은 제외하고 나머지 데이터로 업데이트
-                update_data = {k: v for k, v in request.data.items() if k != 'nickName'}
+            # 닉네임은 변경할 수 없음
+            if 'nickName' in request.data:
+                return Response({
+                    "resultCode": "40",
+                    "message": "닉네임은 변경할 수 없습니다.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # ID는 제외하고 나머지 데이터로 업데이트
+            update_data = {k: v for k, v in request.data.items() if k != 'id' and k != 'nickName' and k != 'userId'}
 
             serializer = self.get_serializer(client, data=update_data, partial=True)
             if serializer.is_valid():
@@ -441,87 +555,73 @@ class ClientViewSet(viewsets.ModelViewSet):
                 "data": None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # nickName으로 고객 삭제 (POST 방식)
+    # ID 없이 고객 수정 (POST/PUT 방식)
     @log_request_params
-    @action(detail=False, methods=['post'], url_path='delete-by-nickname')
-    def delete_by_nickname(self, request):
+    @action(detail=False, methods=['post', 'put'], url_path='update')
+    def update_without_id(self, request):
         """
-        '/api/client/delete-by-nickname/' 엔드포인트로 고객 정보 삭제 (POST 방식)
+        '/api/clients/update/' 엔드포인트로 고객 정보 수정 (POST 또는 PUT 방식)
         """
         try:
-            nickname = request.data.get('nickName')
-            if not nickname:
-                return Response({
-                    "resultCode": "40",
-                    "message": "닉네임을 입력하세요."
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            client = get_object_or_404(self.get_queryset(), nickName=nickname)
-            client.delete()
-            return Response({
-                "resultCode": "20",
-                "message": "고객이 성공적으로 삭제되었습니다."
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({
-                "resultCode": "40",
-                "message": "고객을 찾을 수 없습니다."
-            }, status=status.HTTP_404_NOT_FOUND)
-
-    @log_request_params
-    @action(detail=False, methods=['post'], url_path='search-phone-and-decrease')
-    def search_phone_and_decrease(self, request):
-        """
-        '/api/client/search-phone-and-decrease/' 엔드포인트로 전화번호 검색 및 횟수 차감
-        """
-        # 이 API는 더 이상 사용하지 않습니다
-        return Response({
-            "resultCode": "40",
-            "message": "이 API는 더 이상 사용하지 않습니다. search-by-phone API를 사용하세요.",
-            "data": None
-        }, status=status.HTTP_410_GONE)
-
-    # ID로 고객 수정 (POST 방식)
-    @log_request_params
-    @action(detail=False, methods=['post'], url_path='update-by-id')
-    def update_client_by_id(self, request):
-        """
-        '/api/client/update-by-id/' 엔드포인트로 고객 정보 수정 (POST 방식)
-        """
-        try:
+            # ID 또는 닉네임 중 하나는 필수
             client_id = request.data.get('id')
-            if not client_id:
+            nickname = request.data.get('nickName')
+            user_id = request.data.get('userId')  # 현재 로그인한 사용자의 ID
+            
+            if not client_id and not nickname:
                 return Response({
                     "resultCode": "40",
-                    "message": "고객 ID를 입력하세요.",
+                    "message": "고객 ID 또는 닉네임 중 하나는 필수입니다.",
                     "data": None
                 }, status=status.HTTP_400_BAD_REQUEST)
-
-            try:
-                client = Client.objects.get(id=client_id)
-            except Client.DoesNotExist:
+            
+            if not user_id:
                 return Response({
                     "resultCode": "40",
-                    "message": "고객을 찾을 수 없습니다.",
+                    "message": "사용자 ID를 입력하세요.",
                     "data": None
-                }, status=status.HTTP_404_NOT_FOUND)
-
-            # 닉네임 변경 시 중복 체크
-            new_nickname = request.data.get('nickName')
-            if new_nickname and new_nickname != client.nickName:
-                if Client.objects.filter(nickName=new_nickname).exists():
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # ID로 고객 조회
+            if client_id:
+                try:
+                    client = Client.objects.get(id=client_id)
+                except Client.DoesNotExist:
                     return Response({
-                        "resultCode": "30",
-                        "message": "아이디가 이미 존재합니다.",
-                        "data": {
-                            "nickName": new_nickname,
-                            "exists": True
-                        }
-                    }, status=status.HTTP_200_OK)
-
-            # ID는 제외하고 나머지 데이터로 업데이트
-            update_data = {k: v for k, v in request.data.items() if k != 'id'}
-
+                        "resultCode": "40",
+                        "message": "고객을 찾을 수 없습니다.",
+                        "data": None
+                    }, status=status.HTTP_404_NOT_FOUND)
+            # 닉네임으로 고객 조회
+            elif nickname:
+                try:
+                    client = Client.objects.get(nickName=nickname)
+                except Client.DoesNotExist:
+                    return Response({
+                        "resultCode": "40",
+                        "message": "고객을 찾을 수 없습니다.",
+                        "data": None
+                    }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 현재 사용자가 해당 고객을 등록한 사용자인지 확인
+            if client.registeredBy != user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "해당 매장 고객이 아닙니다.",
+                    "data": None
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 닉네임은 변경할 수 없음
+            if 'newNickName' in request.data:
+                return Response({
+                    "resultCode": "40",
+                    "message": "닉네임은 변경할 수 없습니다.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # ID, 닉네임, 사용자ID를 제외한 데이터로 업데이트
+            update_data = {k: v for k, v in request.data.items() if k not in ['id', 'nickName', 'newNickName', 'userId']}
+            
             serializer = self.get_serializer(client, data=update_data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -592,66 +692,59 @@ class ClientViewSet(viewsets.ModelViewSet):
                 "data": None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # ID 없이 고객 수정 (POST/PUT 방식)
+    # nickName으로 고객 수정 (POST 방식)
     @log_request_params
-    @action(detail=False, methods=['post', 'put'], url_path='update')
-    def update_without_id(self, request):
+    @action(detail=False, methods=['post'], url_path='update-by-nickname')
+    def update_by_nickname(self, request):
         """
-        '/api/clients/update/' 엔드포인트로 고객 정보 수정 (POST 또는 PUT 방식)
+        '/api/client/update-by-nickname/' 엔드포인트로 고객 정보 수정 (POST 방식)
         """
         try:
-            # ID 또는 닉네임 중 하나는 필수
-            client_id = request.data.get('id')
             nickname = request.data.get('nickName')
+            user_id = request.data.get('userId')  # 현재 로그인한 사용자의 ID
             
-            if not client_id and not nickname:
+            if not nickname:
                 return Response({
                     "resultCode": "40",
-                    "message": "고객 ID 또는 닉네임 중 하나는 필수입니다.",
+                    "message": "닉네임을 입력하세요.",
                     "data": None
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # ID로 고객 조회
-            if client_id:
-                try:
-                    client = Client.objects.get(id=client_id)
-                except Client.DoesNotExist:
-                    return Response({
-                        "resultCode": "40",
-                        "message": "고객을 찾을 수 없습니다.",
-                        "data": None
-                    }, status=status.HTTP_404_NOT_FOUND)
-            # 닉네임으로 고객 조회
-            elif nickname:
-                try:
-                    client = Client.objects.get(nickName=nickname)
-                except Client.DoesNotExist:
-                    return Response({
-                        "resultCode": "40",
-                        "message": "고객을 찾을 수 없습니다.",
-                        "data": None
-                    }, status=status.HTTP_404_NOT_FOUND)
+            if not user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "사용자 ID를 입력하세요.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                client = Client.objects.get(nickName=nickname)
+            except Client.DoesNotExist:
+                return Response({
+                    "resultCode": "40",
+                    "message": "고객을 찾을 수 없습니다.",
+                    "data": None
+                }, status=status.HTTP_404_NOT_FOUND)
             
-            # 닉네임 변경 체크
-            new_nickname = request.data.get('newNickName')
-            if new_nickname and new_nickname != client.nickName:
-                if Client.objects.filter(nickName=new_nickname).exists():
-                    return Response({
-                        "resultCode": "30",
-                        "message": "아이디가 이미 존재합니다.",
-                        "data": {
-                            "nickName": new_nickname,
-                            "exists": True
-                        }
-                    }, status=status.HTTP_200_OK)
-                
-                # 새 닉네임으로 업데이트
-                update_data = {k: v for k, v in request.data.items() if k not in ['id', 'nickName', 'newNickName']}
-                update_data['nickName'] = new_nickname
-            else:
-                # ID와 닉네임을 제외한 데이터로 업데이트
-                update_data = {k: v for k, v in request.data.items() if k not in ['id', 'nickName']}
-            
+            # 현재 사용자가 해당 고객을 등록한 사용자인지 확인
+            if client.registeredBy != user_id:
+                return Response({
+                    "resultCode": "40",
+                    "message": "해당 매장 고객이 아닙니다.",
+                    "data": None
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # 닉네임은 변경할 수 없음
+            if 'newNickName' in request.data:
+                return Response({
+                    "resultCode": "40",
+                    "message": "닉네임은 변경할 수 없습니다.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # nickName과 userId는 제외하고 나머지 데이터로 업데이트
+            update_data = {k: v for k, v in request.data.items() if k != 'nickName' and k != 'newNickName' and k != 'userId'}
+
             serializer = self.get_serializer(client, data=update_data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -671,3 +764,43 @@ class ClientViewSet(viewsets.ModelViewSet):
                 "message": f"오류가 발생했습니다: {str(e)}",
                 "data": None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # nickName으로 고객 삭제 (POST 방식)
+    @log_request_params
+    @action(detail=False, methods=['post'], url_path='delete-by-nickname')
+    def delete_by_nickname(self, request):
+        """
+        '/api/client/delete-by-nickname/' 엔드포인트로 고객 정보 삭제 (POST 방식)
+        """
+        try:
+            nickname = request.data.get('nickName')
+            if not nickname:
+                return Response({
+                    "resultCode": "40",
+                    "message": "닉네임을 입력하세요."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            client = get_object_or_404(self.get_queryset(), nickName=nickname)
+            client.delete()
+            return Response({
+                "resultCode": "20",
+                "message": "고객이 성공적으로 삭제되었습니다."
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "resultCode": "40",
+                "message": "고객을 찾을 수 없습니다."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    @log_request_params
+    @action(detail=False, methods=['post'], url_path='search-phone-and-decrease')
+    def search_phone_and_decrease(self, request):
+        """
+        '/api/client/search-phone-and-decrease/' 엔드포인트로 전화번호 검색 및 횟수 차감
+        """
+        # 이 API는 더 이상 사용하지 않습니다
+        return Response({
+            "resultCode": "40",
+            "message": "이 API는 더 이상 사용하지 않습니다. search-by-phone API를 사용하세요.",
+            "data": None
+        }, status=status.HTTP_410_GONE)
